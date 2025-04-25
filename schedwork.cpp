@@ -6,24 +6,21 @@
 #include <vector>
 #include <map>
 #include <algorithm>
-// add or remove necessary headers as you please
-
 #endif
 
 #include "schedwork.h"
-
 using namespace std;
 
-// a constant that can be used to indicate an INVALID 
-// worker ID if that is useful to your implementation.
-// Feel free to not use or delete.
-static const Worker_T INVALID_ID = (unsigned int)-1;
-
-
-// Add prototypes for any helper functions here
-
-
-// Add your implementation of schedule() and other helper functions here
+static bool scheduleHelper(const AvailabilityMatrix& avail,
+                           size_t dailyNeed, size_t maxShifts,
+                           DailySchedule& sched,
+                           vector<size_t>& counts,
+                           size_t day);
+static bool fillSlots(const AvailabilityMatrix& avail,
+                      size_t dailyNeed, size_t maxShifts,
+                      DailySchedule& sched,
+                      vector<size_t>& counts,
+                      size_t day, size_t slot);
 
 bool schedule(
     const AvailabilityMatrix& avail,
@@ -32,14 +29,52 @@ bool schedule(
     DailySchedule& sched
 )
 {
-    if(avail.size() == 0U){
-        return false;
-    }
-    sched.clear();
-    // Add your code below
-
-
-
-
+    size_t n = avail.size();
+    if (n == 0) return false;
+    sched.assign(n, vector<Worker_T>(dailyNeed));
+    vector<size_t> counts(avail[0].size(), 0);
+    return scheduleHelper(avail, dailyNeed, maxShifts, sched, counts, 0);
 }
 
+static bool scheduleHelper(const AvailabilityMatrix& avail,
+                           size_t dailyNeed, size_t maxShifts,
+                           DailySchedule& sched,
+                           vector<size_t>& counts,
+                           size_t day)
+{
+    if (day == avail.size()) {
+        return true;
+    }
+    return fillSlots(avail, dailyNeed, maxShifts, sched, counts, day, 0);
+}
+
+static bool fillSlots(const AvailabilityMatrix& avail,
+                      size_t dailyNeed, size_t maxShifts,
+                      DailySchedule& sched,
+                      vector<size_t>& counts,
+                      size_t day, size_t slot)
+{
+    if (slot == dailyNeed) {
+        return scheduleHelper(avail, dailyNeed, maxShifts, sched, counts, day + 1);
+    }
+    size_t k = avail[day].size();
+    for (Worker_T w = 0; w < k; ++w) {
+        if (avail[day][w] && counts[w] < maxShifts) {
+            bool duplicate = false;
+            for (size_t i = 0; i < slot; ++i) {
+                if (sched[day][i] == w) {
+                    duplicate = true;
+                    break;
+                }
+            }
+            if (duplicate) continue;
+            sched[day][slot] = w;
+            counts[w]++;
+            if (fillSlots(avail, dailyNeed, maxShifts, sched, counts, day, slot + 1)) {
+                return true;
+            }
+            counts[w]--;
+        }
+    }
+    return false;
+}
