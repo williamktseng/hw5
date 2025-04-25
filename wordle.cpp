@@ -14,27 +14,44 @@ using namespace std;
 static void wordleHelper(const string& in, string& current,
                          size_t pos, multiset<char>& floating_set,
                          const set<string>& dict, set<string>& results) {
-    if (pos == in.size()) {
-        if (floating_set.empty() && dict.count(current)) {
+    if (pos == in.length()) {
+        // Check if all floating letters are used
+        if (floating.empty() && dict.find(current) != dict.end()) {
             results.insert(current);
         }
         return;
     }
+
     if (in[pos] != '-') {
+        // Fixed letter position
         current[pos] = in[pos];
-        wordleHelper(in, current, pos + 1, floating_set, dict, results);
+        generateWords(in, floating, current, pos + 1, results, dict);
     } else {
-        for (char c = 'a'; c <= 'z'; ++c) {
-            current[pos] = c;
-            bool used = false;
-            auto it = floating_set.find(c);
-            if (it != floating_set.end()) {
-                used = true;
-                floating_set.erase(it);
+        // Try all possible letters, but need to ensure floating letters are used
+        vector<bool> used(26, false);
+        for (size_t i = 0; i < 26; ++i) {
+            char c = 'a' + i;
+            
+            // Check if this is a floating letter that needs to be placed
+            size_t float_pos = floating.find(c);
+            if (float_pos != string::npos) {
+                string new_floating = floating;
+                new_floating.erase(float_pos, 1);
+                current[pos] = c;
+                generateWords(in, new_floating, current, pos + 1, results, dict);
+                used[i] = true;
             }
-            wordleHelper(in, current, pos + 1, floating_set, dict, results);
-            if (used) {
-                floating_set.insert(c);
+        }
+        
+        // Try other letters only if we have remaining positions to place floating letters
+        size_t remaining_positions = in.length() - pos - 1;
+        if (remaining_positions >= floating.length()) {
+            for (size_t i = 0; i < 26; ++i) {
+                if (!used[i]) {
+                    char c = 'a' + i;
+                    current[pos] = c;
+                    generateWords(in, floating, current, pos + 1, results, dict);
+                }
             }
         }
     }
@@ -46,11 +63,7 @@ set<string> wordle(
     const set<string>& dict)
 {
     set<string> results;
-    multiset<char> floating_set;
-    for (char c : floating) {
-        floating_set.insert(c);
-    }
     string current = in;
-    wordleHelper(in, current, 0, floating_set, dict, results);
+    generateWords(in, floating, current, 0, results, dict);
     return results;
 }
