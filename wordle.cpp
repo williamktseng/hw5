@@ -11,6 +11,7 @@
 #include "dict-eng.h"
 using namespace std;
 
+// Helper prototype
 static void wordleHelper(const string& in, string& current,
                          size_t pos, multiset<char>& floating_set,
                          const set<string>& dict, set<string>& results) {
