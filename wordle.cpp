@@ -11,70 +11,46 @@
 #include "dict-eng.h"
 using namespace std;
 
-// Helper function prototype
-void wordleHelper(
-    const string& pattern,
-    string& current,
-    const string& floating,
-    const set<string>& dict,
-    set<string>& results,
-    size_t pos,
-    string& remainingFloating);
-
-std::set<std::string> wordle(
-    const std::string& in,
-    const std::string& floating,
-    const std::set<std::string>& dict)
-{
-    set<string> results;
-    string current = in;
-    string remainingFloating = floating;
-    
-    wordleHelper(in, current, floating, dict, results, 0, remainingFloating);
-    
-    return results;
-}
-
-void wordleHelper(
-    const string& pattern,
-    string& current,
-    const string& floating,
-    const set<string>& dict,
-    set<string>& results,
-    size_t pos,
-    string& remainingFloating)
-{
-    if (pos == pattern.size()) {
-        if (dict.find(current) != dict.end()) {
-            if (remainingFloating.empty()) {
-                results.insert(current);
-            }
+static void wordleHelper(const string& in, string& current,
+                         size_t pos, multiset<char>& floating_set,
+                         const set<string>& dict, set<string>& results) {
+    if (pos == in.size()) {
+        if (floating_set.empty() && dict.count(current)) {
+            results.insert(current);
         }
         return;
     }
-    
-    if (pattern[pos] != '-') {
-        current[pos] = pattern[pos];
-        
-        wordleHelper(pattern, current, floating, dict, results, pos+1, remainingFloating);
-    }
-    else {
-        for (size_t i = 0; i < remainingFloating.size(); ++i) {
-            char floatingChar = remainingFloating[i];
-            current[pos] = floatingChar;
-            
-            string newRemainingFloating = remainingFloating.substr(0, i) + 
-                                         remainingFloating.substr(i+1);
-            
-            wordleHelper(pattern, current, floating, dict, results, pos+1, newRemainingFloating);
-        }
-        
+    if (in[pos] != '-') {
+        current[pos] = in[pos];
+        wordleHelper(in, current, pos + 1, floating_set, dict, results);
+    } else {
         for (char c = 'a'; c <= 'z'; ++c) {
-            if (remainingFloating.find(c) != string::npos) continue;
-            
             current[pos] = c;
-            
-            wordleHelper(pattern, current, floating, dict, results, pos+1, remainingFloating);
+            bool used = false;
+            auto it = floating_set.find(c);
+            if (it != floating_set.end()) {
+                used = true;
+                floating_set.erase(it);
+            }
+            wordleHelper(in, current, pos + 1, floating_set, dict, results);
+            if (used) {
+                floating_set.insert(c);
+            }
         }
     }
+}
+
+set<string> wordle(
+    const string& in,
+    const string& floating,
+    const set<string>& dict)
+{
+    set<string> results;
+    multiset<char> floating_set;
+    for (char c : floating) {
+        floating_set.insert(c);
+    }
+    string current = in;
+    wordleHelper(in, current, 0, floating_set, dict, results);
+    return results;
 }
